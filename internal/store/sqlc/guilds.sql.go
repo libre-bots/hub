@@ -32,6 +32,15 @@ func (q *Queries) GetGuildSettings(ctx context.Context, arg GetGuildSettingsPara
 	return i, err
 }
 
+const lockGuildSync = `-- name: LockGuildSync :exec
+SELECT pg_advisory_xact_lock(hashtextextended('guild-sync:' || $1::text, 0))
+`
+
+func (q *Queries) LockGuildSync(ctx context.Context, bot string) error {
+	_, err := q.db.Exec(ctx, lockGuildSync, bot)
+	return err
+}
+
 const markGuildLeft = `-- name: MarkGuildLeft :exec
 UPDATE guilds SET left_at = $1::timestamptz
 WHERE bot = $2 AND guild_id = $3 AND left_at IS NULL

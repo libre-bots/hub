@@ -81,3 +81,23 @@ func TestDayIsUTC(t *testing.T) {
 		require.Equal(t, day(2026, 11, 24), r.Day)
 	}
 }
+
+func TestWriteDailyKeepsEarlierDays(t *testing.T) {
+	env := testkit.New(t)
+	join(t, env, "alpha", gid(1), 100)
+	join(t, env, "beta", gid(5), 120)
+	require.NoError(t, stats.WriteDaily(context.Background(), env.Pool, bots, env.Clock.Now()))
+	env.Clock.Advance(24 * time.Hour)
+	join(t, env, "alpha", gid(2), 50)
+	require.NoError(t, stats.WriteDaily(context.Background(), env.Pool, bots, env.Clock.Now()))
+
+	first, second := day(2026, 1, 1), day(2026, 1, 2)
+	require.Equal(t, []dailyRow{
+		{first, "all", 2, 220},
+		{first, "alpha", 1, 100},
+		{first, "beta", 1, 120},
+		{second, "all", 3, 270},
+		{second, "alpha", 2, 150},
+		{second, "beta", 1, 120},
+	}, dailyRows(t, env))
+}

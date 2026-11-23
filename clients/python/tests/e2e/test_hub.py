@@ -14,7 +14,7 @@ TOKEN = "dev-token"
 
 
 async def test_join_and_read_settings() -> None:
-    async with connect(ADDRESS, TOKEN) as channel:
+    async with connect(ADDRESS, TOKEN, tls=False) as channel:
         stub = guilds_pb2_grpc.GuildServiceStub(channel)
         joined = await stub.GuildJoined(
             guilds_pb2.GuildJoinedRequest(guild_id=8388608, preferred_locale="de", member_count=42)
@@ -25,7 +25,7 @@ async def test_join_and_read_settings() -> None:
 
 
 async def test_stats_list_the_bot() -> None:
-    async with connect(ADDRESS, TOKEN) as channel:
+    async with connect(ADDRESS, TOKEN, tls=False) as channel:
         stub = guilds_pb2_grpc.GuildServiceStub(channel)
         await stub.GuildJoined(guilds_pb2.GuildJoinedRequest(guild_id=8388608, preferred_locale="de", member_count=42))
         stats = await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
@@ -35,7 +35,7 @@ async def test_stats_list_the_bot() -> None:
 
 
 async def test_reason_crosses_the_wire() -> None:
-    async with connect(ADDRESS, TOKEN) as channel:
+    async with connect(ADDRESS, TOKEN, tls=False) as channel:
         stub = guilds_pb2_grpc.GuildServiceStub(channel)
         with pytest.raises(grpc.aio.AioRpcError) as raised:
             await stub.GetGuildSettings(guilds_pb2.GetGuildSettingsRequest(guild_id=12582912))
@@ -44,7 +44,7 @@ async def test_reason_crosses_the_wire() -> None:
 
 
 async def test_wrong_token() -> None:
-    async with connect(ADDRESS, "nope") as channel:
+    async with connect(ADDRESS, "nope", tls=False) as channel:
         with pytest.raises(grpc.aio.AioRpcError) as raised:
             await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
     assert raised.value.code() == grpc.StatusCode.UNAUTHENTICATED

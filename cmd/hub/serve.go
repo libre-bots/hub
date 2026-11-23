@@ -24,7 +24,11 @@ import (
 	"github.com/libre-bots/hub/internal/store"
 )
 
-var listen = net.Listen
+var (
+	listen             = net.Listen
+	openAttemptTimeout = 5 * time.Second
+	openDeadline       = 30 * time.Second
+)
 
 func serve(ctx context.Context, getenv func(string) string, stderr io.Writer) error {
 	cfg, err := config.Load(getenv, os.ReadFile)
@@ -108,9 +112,11 @@ func cancelledIsClean(ctx context.Context, err error) error {
 }
 
 func openWithRetry(ctx context.Context, url string) (*pgxpool.Pool, error) {
-	deadline := time.Now().Add(30 * time.Second)
+	deadline := time.Now().Add(openDeadline)
 	for {
-		pool, err := store.Open(ctx, url)
+		attemptCtx, cancel := context.WithTimeout(ctx, openAttemptTimeout)
+		pool, err := store.Open(attemptCtx, url)
+		cancel()
 		if err == nil {
 			return pool, nil
 		}

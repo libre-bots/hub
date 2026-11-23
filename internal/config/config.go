@@ -43,6 +43,9 @@ func Load(getenv func(string) string, readFile func(string) ([]byte, error)) (Co
 			return Config{}, fmt.Errorf("DATABASE_URL_FILE: %w", err)
 		}
 		url = strings.TrimSpace(string(content))
+		if url == "" {
+			return Config{}, fmt.Errorf("DATABASE_URL_FILE: file is empty")
+		}
 	}
 	cfg.DatabaseURL = url
 
@@ -82,7 +85,7 @@ func parseBots(value string) (map[string]string, error) {
 			return nil, fmt.Errorf("HUB_BOT_TOKENS: entry %d has no =", i+1)
 		}
 		if !botName.MatchString(name) || name == "all" {
-			return nil, fmt.Errorf("HUB_BOT_TOKENS: invalid bot name %q", name)
+			return nil, fmt.Errorf("HUB_BOT_TOKENS: entry %d has an invalid bot name", i+1)
 		}
 		if !tokenHex.MatchString(hash) {
 			return nil, fmt.Errorf("HUB_BOT_TOKENS: hash of bot %s is not 64 lower-case hex characters", name)

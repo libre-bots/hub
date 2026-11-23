@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import grpc
 import grpc.aio
+import pytest
 
 from libre.hub.v1 import guilds_pb2, guilds_pb2_grpc, stats_pb2, stats_pb2_grpc
 from libre_hub_client import KEEPALIVE_OPTIONS, connect
@@ -49,7 +50,7 @@ async def serving(register: Callable[[grpc.aio.Server], None]) -> AsyncGenerator
 async def test_connect_sends_bearer_token() -> None:
     servicer = StatsServicer()
     async with serving(lambda s: stats_pb2_grpc.add_StatsServiceServicer_to_server(servicer, s)) as address:
-        async with connect(address, "t") as channel:
+        async with connect(address, "t", tls=False) as channel:
             await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
     assert servicer.seen["authorization"] == "Bearer t"
 
@@ -57,7 +58,7 @@ async def test_connect_sends_bearer_token() -> None:
 async def test_connect_sends_token_on_streams() -> None:
     servicer = GuildServicer()  # pyright: ignore[reportAbstractUsage]
     async with serving(lambda s: guilds_pb2_grpc.add_GuildServiceServicer_to_server(servicer, s)) as address:
-        async with connect(address, "t") as channel:
+        async with connect(address, "t", tls=False) as channel:
             stub = guilds_pb2_grpc.GuildServiceStub(channel)
             async for _ in stub.WatchGuildSettings(guilds_pb2.WatchGuildSettingsRequest()):
                 pass
@@ -67,12 +68,17 @@ async def test_connect_sends_token_on_streams() -> None:
 async def test_connect_keeps_caller_metadata() -> None:
     servicer = StatsServicer()
     async with serving(lambda s: stats_pb2_grpc.add_StatsServiceServicer_to_server(servicer, s)) as address:
-        async with connect(address, "t") as channel:
+        async with connect(address, "t", tls=False) as channel:
             await stats_pb2_grpc.StatsServiceStub(channel).GetStats(
                 stats_pb2.GetStatsRequest(), metadata=(("x-test", "1"),)
             )
     assert servicer.seen["x-test"] == "1"
     assert servicer.seen["authorization"] == "Bearer t"
+
+
+def test_connect_requires_an_explicit_transport() -> None:
+    with pytest.raises(TypeError):
+        connect("127.0.0.1:1", "t")  # pyright: ignore[reportCallIssue]
 
 
 def test_keepalive_options() -> None:

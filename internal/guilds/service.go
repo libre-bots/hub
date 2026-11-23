@@ -123,6 +123,10 @@ func (s *Service) SyncGuilds(ctx context.Context, req *hubv1.SyncGuildsRequest) 
 	var joined, left uint32
 	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		q := s.q.WithTx(tx)
+		// Overlapping syncs of one bot would miss each other's new rows under read committed.
+		if err := q.LockGuildSync(ctx, bot); err != nil {
+			return err
+		}
 		joined, left = 0, 0
 		for _, g := range guilds {
 			row, err := q.UpsertGuild(ctx, sqlc.UpsertGuildParams{

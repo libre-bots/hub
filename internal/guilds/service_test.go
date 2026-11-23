@@ -569,6 +569,64 @@ func TestWatchCancelledByClientIsNotLogged(t *testing.T) {
 	cancel()
 	_, err := stream.Recv()
 	require.Equal(t, codes.Canceled, status.Code(err))
-	<-subCtx.Done()
+	select {
+	case <-subCtx.Done():
+	case <-time.After(2 * time.Second):
+		require.FailNow(t, "subscription not cancelled")
+	}
 	require.Never(t, func() bool { return buf.Len() > 0 }, 300*time.Millisecond, 10*time.Millisecond)
+}
+
+func holdSyncLock(t *testing.T, env *testkit.Env, bot string) (release func()) {
+	t.Helper()
+	tx, err := env.Pool.Begin(context.Background())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
+	require.NoError(t, sqlc.New(env.Pool).WithTx(tx).LockGuildSync(context.Background(), bot))
+	return func() { require.NoError(t, tx.Commit(context.Background())) }
+}
+
+func syncAsync(c hubv1.GuildServiceClient) <-chan error {
+	done := make(chan error, 1)
+	go func() {
+		_, err := c.SyncGuilds(context.Background(), &hubv1.SyncGuildsRequest{
+			Shards: shards(1, 0),
+			Guilds: []*hubv1.SyncedGuild{{GuildId: gid(1), PreferredLocale: "en-US", MemberCount: 1}},
+		})
+		done <- err
+	}()
+	return done
+}
+
+func TestSyncGuildsWaitsForTheSyncLockOfTheSameBot(t *testing.T) {
+	env := testkit.New(t)
+	release := holdSyncLock(t, env, "alpha")
+	done := syncAsync(client(t, env, "alpha"))
+
+	select {
+	case err := <-done:
+		require.FailNow(t, "sync returned while the lock was held", "%v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	release()
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(2 * time.Second):
+		require.FailNow(t, "sync did not return after the lock was released")
+	}
+}
+
+func TestSyncGuildsIgnoresTheSyncLockOfAnotherBot(t *testing.T) {
+	env := testkit.New(t)
+	holdSyncLock(t, env, "alpha")
+	done := syncAsync(client(t, env, "beta"))
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(2 * time.Second):
+		require.FailNow(t, "sync of another bot was blocked")
+	}
 }

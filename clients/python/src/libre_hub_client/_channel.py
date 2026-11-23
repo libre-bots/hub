@@ -46,8 +46,8 @@ class _StreamTokenInterceptor(grpc.aio.UnaryStreamClientInterceptor):
         return await continuation(_with_token(client_call_details, self._token), request)
 
 
-def connect(address: str, token: str, *, tls: bool = False, root_certificates: bytes | None = None) -> grpc.aio.Channel:
-    """Return a channel that sends the bearer token on every call; it does not connect until the first call."""
+def connect(address: str, token: str, *, tls: bool, root_certificates: bytes | None = None) -> grpc.aio.Channel:
+    """Return a channel that sends the bearer token on every call; tls=False sends it unencrypted."""
     interceptors: list[grpc.aio.ClientInterceptor] = [_UnaryTokenInterceptor(token), _StreamTokenInterceptor(token)]
     if tls:
         credentials = grpc.ssl_channel_credentials(root_certificates=root_certificates)

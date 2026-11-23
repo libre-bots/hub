@@ -14,6 +14,9 @@ WITH prev AS (
 SELECT up.guild_id, up.locale, NOT EXISTS (SELECT 1 FROM prev WHERE prev.left_at IS NULL) AS joined
 FROM up;
 
+-- name: LockGuildSync :exec
+SELECT pg_advisory_xact_lock(hashtextextended('guild-sync:' || sqlc.arg(bot)::text, 0));
+
 -- name: MarkGuildLeft :exec
 UPDATE guilds SET left_at = sqlc.arg(now)::timestamptz
 WHERE bot = sqlc.arg(bot) AND guild_id = sqlc.arg(guild_id) AND left_at IS NULL;

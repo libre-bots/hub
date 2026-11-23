@@ -36,7 +36,7 @@ async def fail_with(details: list[Any] | None) -> grpc.aio.AioRpcError:
     port = server.add_insecure_port("127.0.0.1:0")
     await server.start()
     try:
-        async with connect(f"127.0.0.1:{port}", "t") as channel:
+        async with connect(f"127.0.0.1:{port}", "t", tls=False) as channel:
             with pytest.raises(grpc.aio.AioRpcError) as raised:
                 await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
     finally:

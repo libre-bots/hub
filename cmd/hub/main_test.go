@@ -12,12 +12,14 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"io"
 	"log/slog"
 	"math/big"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -405,4 +407,47 @@ func TestGuardedLogsPanicAndReturns(t *testing.T) {
 	assert.Equal(t, "retention", entries[0]["job"])
 	assert.Equal(t, "job exploded", entries[0]["panic"])
 	assert.Contains(t, entries[0]["stack"], "main_test.go")
+}
+
+func TestRunBoundsAnUnresponsiveDatabase(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = lis.Close() })
+	var held []net.Conn
+	var mu sync.Mutex
+	go func() {
+		for {
+			conn, err := lis.Accept()
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			held = append(held, conn)
+			mu.Unlock()
+		}
+	}()
+	t.Cleanup(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, c := range held {
+			_ = c.Close()
+		}
+	})
+
+	attempt, deadline := openAttemptTimeout, openDeadline
+	openAttemptTimeout, openDeadline = 100*time.Millisecond, 500*time.Millisecond
+	t.Cleanup(func() { openAttemptTimeout, openDeadline = attempt, deadline })
+
+	env := envOf(map[string]string{"DATABASE_URL": "postgres://hub@" + lis.Addr().String() + "/hub?sslmode=disable"})
+	var stderr bytes.Buffer
+	codes := make(chan int, 1)
+	go func() { codes <- run(context.Background(), []string{"serve"}, env, io.Discard, &stderr) }()
+
+	select {
+	case code := <-codes:
+		assert.Equal(t, 1, code)
+		assert.Contains(t, "\n"+stderr.String(), "\nhub: open database")
+	case <-time.After(10 * time.Second):
+		t.Fatal("run did not return")
+	}
 }

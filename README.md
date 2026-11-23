@@ -48,7 +48,7 @@ mise install
 ```
 
 - `make generate`: regenerate the Go, SQL and Python code from `proto/` and the queries
-- `make lint`: `go vet`, `buf lint`, `sqlc diff` and `actionlint`
+- `make lint`: `gofmt` (fails on unformatted Go files), `go vet`, `buf lint`, `sqlc diff` and `actionlint`
 - `make test`: run the Go tests (they start Postgres with Docker)
 - `make test-race`: the same with the race detector
 - `make build`: build `bin/hub`
@@ -70,7 +70,7 @@ from libre_hub_client import connect
 
 
 async def main() -> None:
-    async with connect("localhost:50051", "dev-token") as channel:
+    async with connect("localhost:50051", "dev-token", tls=False) as channel:
         stats = await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
         print(stats.total.guild_count)
 
@@ -78,10 +78,15 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+`tls` has to be given. With `tls=True`, `root_certificates` takes the CA certificate when the hub uses one of its own.
+
 ## Hosting it yourself
 
 - Keep the Postgres volume on encrypted storage. The database holds guild ids, their settings and the user ids of
   pending deletion requests.
 - Never use `dev-token` outside development. Create tokens with `hub token`.
-- Set `HUB_TLS_CERT_FILE` and `HUB_TLS_KEY_FILE` so that tokens do not cross the network in plaintext, and leave
-  `HUB_REFLECTION` off.
+- Every call carries the bot's token. If hub and bots run on the same machine, the private container network is
+  enough. If they run on different machines, either set `HUB_TLS_CERT_FILE` and `HUB_TLS_KEY_FILE` and connect with
+  `tls=True`, or put them on an encrypted overlay network
+  (`docker network create --driver overlay --opt encrypted <name>`).
+- Leave `HUB_REFLECTION` off.

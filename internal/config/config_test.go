@@ -16,7 +16,11 @@ var (
 )
 
 func TestLoad(t *testing.T) {
-	files := map[string]string{"/run/secrets/db": "postgres://x\n"}
+	files := map[string]string{
+		"/run/secrets/db":         "postgres://x\n",
+		"/run/secrets/empty":      "",
+		"/run/secrets/whitespace": " \n\t\n",
+	}
 	readFile := func(path string) ([]byte, error) {
 		content, ok := files[path]
 		if !ok {
@@ -54,6 +58,16 @@ func TestLoad(t *testing.T) {
 			wantErr: "DATABASE_URL_FILE",
 		},
 		{
+			name:    "database url file empty",
+			env:     map[string]string{"DATABASE_URL_FILE": "/run/secrets/empty"},
+			wantErr: "DATABASE_URL_FILE: file is empty",
+		},
+		{
+			name:    "database url file whitespace only",
+			env:     map[string]string{"DATABASE_URL_FILE": "/run/secrets/whitespace"},
+			wantErr: "DATABASE_URL_FILE: file is empty",
+		},
+		{
 			name:    "both database url variables",
 			env:     map[string]string{"DATABASE_URL": "postgres://y", "DATABASE_URL_FILE": "/run/secrets/db"},
 			wantErr: "DATABASE_URL",
@@ -76,22 +90,22 @@ func TestLoad(t *testing.T) {
 		{
 			name:    "bot name with upper case",
 			env:     map[string]string{"DATABASE_URL": "postgres://y", "HUB_BOT_TOKENS": "All=" + hashA},
-			wantErr: "HUB_BOT_TOKENS",
+			wantErr: "HUB_BOT_TOKENS: entry 1 has an invalid bot name",
 		},
 		{
 			name:    "bot name all",
 			env:     map[string]string{"DATABASE_URL": "postgres://y", "HUB_BOT_TOKENS": "all=" + hashA},
-			wantErr: "HUB_BOT_TOKENS",
+			wantErr: "HUB_BOT_TOKENS: entry 1 has an invalid bot name",
 		},
 		{
 			name:    "bot name too short",
 			env:     map[string]string{"DATABASE_URL": "postgres://y", "HUB_BOT_TOKENS": "a=" + hashA},
-			wantErr: "HUB_BOT_TOKENS",
+			wantErr: "HUB_BOT_TOKENS: entry 1 has an invalid bot name",
 		},
 		{
 			name:    "bot name starts with digit",
 			env:     map[string]string{"DATABASE_URL": "postgres://y", "HUB_BOT_TOKENS": "1x=" + hashA},
-			wantErr: "HUB_BOT_TOKENS",
+			wantErr: "HUB_BOT_TOKENS: entry 1 has an invalid bot name",
 		},
 		{
 			name:    "hash too short",
@@ -170,4 +184,13 @@ func TestEntryWithoutEqualsSignIsNotEchoed(t *testing.T) {
 	_, err := config.Load(func(key string) string { return env[key] }, func(string) ([]byte, error) { return nil, errors.New("not found") })
 	require.ErrorContains(t, err, "HUB_BOT_TOKENS: entry 2 has no =")
 	require.NotContains(t, err.Error(), "pasted-secret-token")
+}
+
+func TestInvalidBotNameIsNotEchoed(t *testing.T) {
+	token := "Ab3-" + strings.Repeat("xY9", 13)
+	require.Len(t, token, 43)
+	env := map[string]string{"DATABASE_URL": "postgres://y", "HUB_BOT_TOKENS": "alpha=" + hashA + ", " + token + "=" + hashB}
+	_, err := config.Load(func(key string) string { return env[key] }, func(string) ([]byte, error) { return nil, errors.New("not found") })
+	require.ErrorContains(t, err, "HUB_BOT_TOKENS: entry 2 has an invalid bot name")
+	require.NotContains(t, err.Error(), token)
 }
