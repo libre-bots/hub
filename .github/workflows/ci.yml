@@ -39,7 +39,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v5
-      - run: buf breaking --against "https://github.com/libre-bots/hub.git#branch=main"
+      - name: Compare the interface with the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          git fetch --depth=1 origin "$BASE_REF"
+          if git ls-tree -r --name-only FETCH_HEAD -- proto | grep -q '\.proto$'; then
+            buf breaking --against "$REPO_URL#branch=$BASE_REF"
+          else
+            echo "$BASE_REF has no interface yet, nothing to compare"
+          fi
 
   python:
     runs-on: ubuntu-latest
