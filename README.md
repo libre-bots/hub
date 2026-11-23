@@ -3,8 +3,7 @@
 The hub is a gRPC service that owns the Postgres database for a family of Discord bots. Bots do not talk to the
 database; they call the hub with a per-bot token. It keeps which bot is in which guild, each guild's language,
 pending deletion requests and statistics, and runs the privacy operations, in one place. The hub deletes what it
-stores for a guild 30 days after the bot left it, and writes daily figures. The design is described in the
-[architecture document](https://github.com/libre-bots/.github/blob/main/docs/architecture.md).
+stores for a guild 30 days after the bot left it, and writes daily figures.
 
 ## Run it
 
