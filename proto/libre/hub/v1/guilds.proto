@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package libre.hub.v1;
+
+import "libre/hub/v1/shards.proto";
+
+service GuildService {
+  // Registers the guild for the calling bot, or refreshes its member count; returns its settings.
+  rpc GuildJoined(GuildJoinedRequest) returns (GuildJoinedResponse);
+  // Marks the guild as left; its data is deleted 30 days later unless the bot rejoins.
+  rpc GuildLeft(GuildLeftRequest) returns (GuildLeftResponse);
+  // Registers every guild sent and marks every other guild of the calling bot on those shards as left; joined is approximate when calls overlap.
+  rpc SyncGuilds(SyncGuildsRequest) returns (SyncGuildsResponse);
+  // NOT_FOUND with REASON_GUILD_NOT_REGISTERED for a guild that is unknown or has left.
+  rpc GetGuildSettings(GetGuildSettingsRequest) returns (GetGuildSettingsResponse);
+  // NOT_FOUND with REASON_GUILD_NOT_REGISTERED for a guild that is unknown or has left.
+  rpc UpdateGuildSettings(UpdateGuildSettingsRequest) returns (UpdateGuildSettingsResponse);
+  // Sends each later change for guilds on those shards; no snapshot at start and no replay after a reconnect; headers arrive once the subscription is active.
+  rpc WatchGuildSettings(WatchGuildSettingsRequest) returns (stream WatchGuildSettingsResponse);
+}
+
+message GuildSettings {
+  uint64 guild_id = 1;
+  string locale = 2;
+}
+
+message GuildJoinedRequest {
+  uint64 guild_id = 1;
+  string preferred_locale = 2;
+  uint32 member_count = 3;
+}
+message GuildJoinedResponse {
+  GuildSettings settings = 1;
+}
+
+message GuildLeftRequest {
+  uint64 guild_id = 1;
+}
+message GuildLeftResponse {}
+
+message SyncedGuild {
+  uint64 guild_id = 1;
+  uint32 member_count = 2;
+  string preferred_locale = 3;
+}
+message SyncGuildsRequest {
+  ShardSet shards = 1;
+  repeated SyncedGuild guilds = 2;
+}
+message SyncGuildsResponse {
+  uint32 joined = 1;
+  uint32 left = 2;
+}
+
+message GetGuildSettingsRequest {
+  uint64 guild_id = 1;
+}
+message GetGuildSettingsResponse {
+  GuildSettings settings = 1;
+}
+
+message UpdateGuildSettingsRequest {
+  uint64 guild_id = 1;
+  string locale = 2;
+}
+message UpdateGuildSettingsResponse {
+  GuildSettings settings = 1;
+}
+
+message WatchGuildSettingsRequest {
+  ShardSet shards = 1;
+}
+message WatchGuildSettingsResponse {
+  GuildSettings settings = 1;
+}
