@@ -17,6 +17,9 @@ func logPanic(ctx context.Context, l *slog.Logger, method string, value any) err
 	if c, ok := auth.ClientFrom(ctx); ok {
 		attrs = append(attrs, "bot", c.Bot)
 	}
+	if v, ok := shardsFrom(ctx); ok {
+		attrs = append(attrs, "shards", v)
+	}
 	attrs = append(attrs, "panic", value, "stack", string(debug.Stack()))
 	l.ErrorContext(ctx, "handler panicked", attrs...)
 	return status.Error(codes.Internal, "internal error")

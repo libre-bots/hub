@@ -13,9 +13,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/interop/grpc_testing"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"github.com/libre-bots/hub/internal/reason"
+	"github.com/libre-bots/hub/internal/server"
 	"github.com/libre-bots/hub/internal/testkit"
 )
 
@@ -122,5 +124,69 @@ func TestCanceledIsNotLogged(t *testing.T) {
 			require.Error(t, serr)
 			require.Empty(t, buf.String())
 		})
+	}
+}
+
+func withShards(ctx context.Context, value string) context.Context {
+	return metadata.AppendToOutgoingContext(ctx, server.ShardsMetadataKey, value)
+}
+
+func TestShardsAreLogged(t *testing.T) {
+	c, buf := logEnv(t, reason.Internal("load thing", errors.New("connection reset")))
+
+	_, err := c.EmptyCall(withShards(t.Context(), "0,1/4"), &grpc_testing.Empty{})
+	require.Equal(t, codes.Internal, status.Code(err))
+	require.Contains(t, buf.String(), "bot=alpha shards=0,1/4 error=")
+}
+
+func TestShardsAreLoggedOnStreams(t *testing.T) {
+	c, buf := logEnv(t, reason.Internal("load thing", errors.New("connection reset")))
+
+	stream, err := c.StreamingOutputCall(withShards(t.Context(), "0,1/4"), &grpc_testing.StreamingOutputCallRequest{})
+	require.NoError(t, err)
+	_, err = stream.Recv()
+	require.Equal(t, codes.Internal, status.Code(err))
+	require.Contains(t, buf.String(), "bot=alpha shards=0,1/4 error=")
+}
+
+func TestNoShardsWithoutTheKey(t *testing.T) {
+	c, buf := logEnv(t, reason.Internal("load thing", errors.New("connection reset")))
+
+	_, err := c.EmptyCall(t.Context(), &grpc_testing.Empty{})
+	require.Equal(t, codes.Internal, status.Code(err))
+	require.NotEmpty(t, buf.String())
+	require.NotContains(t, buf.String(), "shards")
+}
+
+func TestInvalidShardsAreIgnored(t *testing.T) {
+	for name, value := range map[string]string{
+		"letters":   "abc",
+		"no count":  "0,1",
+		"semicolon": "0;1/4",
+		"no ids":    "/4",
+		"too long":  strings.Repeat("1,", 299) + "1/4",
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, buf := logEnv(t, reason.Internal("load thing", errors.New("connection reset")))
+
+			_, err := c.EmptyCall(withShards(t.Context(), value), &grpc_testing.Empty{})
+			require.Equal(t, codes.Internal, status.Code(err))
+			require.NotEmpty(t, buf.String())
+			require.NotContains(t, buf.String(), "shards")
+			require.NotContains(t, buf.String(), value)
+		})
+	}
+}
+
+func TestSuccessLogsNothingWithShards(t *testing.T) {
+	for _, withKey := range []bool{false, true} {
+		c, buf := logEnv(t, nil)
+		ctx := t.Context()
+		if withKey {
+			ctx = withShards(ctx, "0,1/4")
+		}
+		_, err := c.EmptyCall(ctx, &grpc_testing.Empty{})
+		require.NoError(t, err)
+		require.Empty(t, buf.String())
 	}
 }

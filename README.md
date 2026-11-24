@@ -28,6 +28,11 @@ token is public, it uses plaintext and it leaves reflection on. When you work on
 | `HUB_TLS_CERT_FILE` | none | Certificate file. Requires `HUB_TLS_KEY_FILE`. |
 | `HUB_TLS_KEY_FILE` | none | Private key file. Requires `HUB_TLS_CERT_FILE`. |
 
+Callers other than the Python client can send the metadata `libre-shards` to label the hub's log records with the
+shards of their process: the ids in ascending order, joined by `,`, then `/` and the shard count, for example `0,1/4`.
+The hub ignores a value that does not match `^[0-9]{1,5}(,[0-9]{1,5})*/[0-9]{1,5}$` or is longer than 512 characters;
+the value never affects authentication or what a call does.
+
 The binary has four subcommands: `serve` (the default), `token`, `health` and `version`.
 
 ## Bot tokens
@@ -79,6 +84,9 @@ asyncio.run(main())
 ```
 
 `tls` has to be given. With `tls=True`, `root_certificates` takes the CA certificate when the hub uses one of its own.
+
+`shards` takes a function that returns the shard ids and the shard count of the process, for example
+`lambda: ([0, 1], 4)`, or `None` while the shards are not known yet. The hub adds them to its log records, nothing else.
 
 ## Hosting it yourself
 
