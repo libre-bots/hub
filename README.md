@@ -87,6 +87,7 @@ asyncio.run(main())
 - Never use `dev-token` outside development. Create tokens with `hub token`.
 - Every call carries the bot's token. If hub and bots run on the same machine, the private container network is
   enough. If they run on different machines, either set `HUB_TLS_CERT_FILE` and `HUB_TLS_KEY_FILE` and connect with
-  `tls=True`, or put them on an encrypted overlay network
-  (`docker network create --driver overlay --opt encrypted <name>`).
+  `tls=True`, or put them on an encrypted overlay network. Both machines must belong to the same swarm, and
+  containers started with Docker Compose can only join the network if it is attachable:
+  `docker network create --driver overlay --opt encrypted --attachable <name>`.
 - Leave `HUB_REFLECTION` off.
