@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from typing import Any, Final
 
 import grpc
@@ -12,17 +12,27 @@ KEEPALIVE_OPTIONS: Final[tuple[tuple[str, int], ...]] = (
 )
 
 
-def _with_token(details: grpc.aio.ClientCallDetails, token: str) -> grpc.aio.ClientCallDetails:
+ShardsSource = Callable[[], tuple[Sequence[int], int] | None]
+
+
+def _with_auth(
+    details: grpc.aio.ClientCallDetails, token: str, shards: ShardsSource | None
+) -> grpc.aio.ClientCallDetails:
     metadata = grpc.aio.Metadata(*(details.metadata or ()))
     metadata.add("authorization", f"Bearer {token}")
+    current = shards() if shards is not None else None
+    if current is not None:
+        ids, count = current
+        metadata.add("libre-shards", f"{','.join(str(i) for i in sorted(set(ids)))}/{count}")
     return grpc.aio.ClientCallDetails(
         details.method, details.timeout, metadata, details.credentials, details.wait_for_ready
     )
 
 
 class _UnaryTokenInterceptor(grpc.aio.UnaryUnaryClientInterceptor):
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, shards: ShardsSource | None) -> None:
         self._token = token
+        self._shards = shards
 
     async def intercept_unary_unary(
         self,
@@ -30,12 +40,13 @@ class _UnaryTokenInterceptor(grpc.aio.UnaryUnaryClientInterceptor):
         client_call_details: grpc.aio.ClientCallDetails,
         request: Any,
     ) -> Any:
-        return await continuation(_with_token(client_call_details, self._token), request)
+        return await continuation(_with_auth(client_call_details, self._token, self._shards), request)
 
 
 class _StreamTokenInterceptor(grpc.aio.UnaryStreamClientInterceptor):
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, shards: ShardsSource | None) -> None:
         self._token = token
+        self._shards = shards
 
     async def intercept_unary_stream(
         self,
@@ -43,12 +54,22 @@ class _StreamTokenInterceptor(grpc.aio.UnaryStreamClientInterceptor):
         client_call_details: grpc.aio.ClientCallDetails,
         request: Any,
     ) -> AsyncIterator[Any]:
-        return await continuation(_with_token(client_call_details, self._token), request)
+        return await continuation(_with_auth(client_call_details, self._token, self._shards), request)
 
 
-def connect(address: str, token: str, *, tls: bool, root_certificates: bytes | None = None) -> grpc.aio.Channel:
-    """Return a channel that sends the bearer token on every call; tls=False sends it unencrypted."""
-    interceptors: list[grpc.aio.ClientInterceptor] = [_UnaryTokenInterceptor(token), _StreamTokenInterceptor(token)]
+def connect(
+    address: str,
+    token: str,
+    *,
+    tls: bool,
+    root_certificates: bytes | None = None,
+    shards: ShardsSource | None = None,
+) -> grpc.aio.Channel:
+    """Return a channel that adds the token and shard label to each call; tls=False sends them unencrypted."""
+    interceptors: list[grpc.aio.ClientInterceptor] = [
+        _UnaryTokenInterceptor(token, shards),
+        _StreamTokenInterceptor(token, shards),
+    ]
     if tls:
         credentials = grpc.ssl_channel_credentials(root_certificates=root_certificates)
         return grpc.aio.secure_channel(address, credentials, options=KEEPALIVE_OPTIONS, interceptors=interceptors)

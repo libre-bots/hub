@@ -76,6 +76,55 @@ async def test_connect_keeps_caller_metadata() -> None:
     assert servicer.seen["authorization"] == "Bearer t"
 
 
+async def test_connect_sends_shards() -> None:
+    servicer = StatsServicer()
+    async with serving(lambda s: stats_pb2_grpc.add_StatsServiceServicer_to_server(servicer, s)) as address:
+        async with connect(address, "t", tls=False, shards=lambda: ([1, 0, 1], 4)) as channel:
+            await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
+    assert servicer.seen["libre-shards"] == "0,1/4"
+    assert servicer.seen["authorization"] == "Bearer t"
+
+
+async def test_connect_sends_shards_on_streams() -> None:
+    servicer = GuildServicer()  # pyright: ignore[reportAbstractUsage]
+    async with serving(lambda s: guilds_pb2_grpc.add_GuildServiceServicer_to_server(servicer, s)) as address:
+        async with connect(address, "t", tls=False, shards=lambda: ([1, 0, 1], 4)) as channel:
+            stub = guilds_pb2_grpc.GuildServiceStub(channel)
+            async for _ in stub.WatchGuildSettings(guilds_pb2.WatchGuildSettingsRequest()):
+                pass
+    assert servicer.seen["libre-shards"] == "0,1/4"
+    assert servicer.seen["authorization"] == "Bearer t"
+
+
+async def test_connect_sends_no_shards_by_default() -> None:
+    servicer = StatsServicer()
+    async with serving(lambda s: stats_pb2_grpc.add_StatsServiceServicer_to_server(servicer, s)) as address:
+        async with connect(address, "t", tls=False) as channel:
+            await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
+    assert "libre-shards" not in servicer.seen
+
+
+async def test_connect_sends_no_shards_when_the_callable_returns_none() -> None:
+    servicer = StatsServicer()
+    async with serving(lambda s: stats_pb2_grpc.add_StatsServiceServicer_to_server(servicer, s)) as address:
+        async with connect(address, "t", tls=False, shards=lambda: None) as channel:
+            await stats_pb2_grpc.StatsServiceStub(channel).GetStats(stats_pb2.GetStatsRequest())
+    assert "libre-shards" not in servicer.seen
+
+
+async def test_connect_asks_for_shards_on_every_call() -> None:
+    servicer = StatsServicer()
+    current: tuple[list[int], int] | None = None
+    async with serving(lambda s: stats_pb2_grpc.add_StatsServiceServicer_to_server(servicer, s)) as address:
+        async with connect(address, "t", tls=False, shards=lambda: current) as channel:
+            stub = stats_pb2_grpc.StatsServiceStub(channel)
+            await stub.GetStats(stats_pb2.GetStatsRequest())
+            assert "libre-shards" not in servicer.seen
+            current = ([2, 3], 4)
+            await stub.GetStats(stats_pb2.GetStatsRequest())
+    assert servicer.seen["libre-shards"] == "2,3/4"
+
+
 def test_connect_requires_an_explicit_transport() -> None:
     with pytest.raises(TypeError):
         connect("127.0.0.1:1", "t")  # pyright: ignore[reportCallIssue]

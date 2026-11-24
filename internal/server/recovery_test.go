@@ -10,8 +10,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/interop/grpc_testing"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/libre-bots/hub/internal/server"
 	"github.com/libre-bots/hub/internal/testkit"
 )
 
@@ -74,4 +76,22 @@ func TestPanicInStreamHandlerIsRecovered(t *testing.T) {
 
 	_, err = c.UnaryCall(t.Context(), &grpc_testing.SimpleRequest{})
 	require.NoError(t, err)
+}
+
+func TestPanicLogsShards(t *testing.T) {
+	c, buf := panicEnv(t)
+
+	ctx := metadata.AppendToOutgoingContext(t.Context(), server.ShardsMetadataKey, "0,1/4")
+	_, err := c.EmptyCall(ctx, &grpc_testing.Empty{})
+	require.Equal(t, codes.Internal, status.Code(err))
+	requireOnePanicRecord(t, buf, "/grpc.testing.TestService/EmptyCall", "handler exploded")
+	require.Contains(t, buf.String(), "bot=alpha shards=0,1/4 panic=")
+}
+
+func TestPanicWithoutShardsHasNone(t *testing.T) {
+	c, buf := panicEnv(t)
+
+	_, err := c.EmptyCall(t.Context(), &grpc_testing.Empty{})
+	require.Equal(t, codes.Internal, status.Code(err))
+	require.NotContains(t, buf.String(), "shards")
 }
