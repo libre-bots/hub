@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+.idea
+.DS_Store
+bin
+clients
+proto
+dist
+**/__pycache__
+.pytest_cache
+.ruff_cache
+*.md

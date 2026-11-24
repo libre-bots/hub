@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: make lint
+      - run: make test-race
+      - run: make build
+
+  generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: make generate
+      - run: git diff --exit-code
+      - run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+  breaking:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - name: Compare the interface with the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          git fetch --depth=1 origin "$BASE_REF"
+          if git ls-tree -r --name-only FETCH_HEAD -- proto | grep -q '\.proto$'; then
+            buf breaking --against "$REPO_URL#branch=$BASE_REF"
+          else
+            echo "$BASE_REF has no interface yet, nothing to compare"
+          fi
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: make python-lint
+      - run: make python-test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: docker compose up --build --wait
+      - run: make e2e
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down -v
