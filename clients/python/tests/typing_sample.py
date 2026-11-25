@@ -1,6 +1,6 @@
 import grpc.aio
 
-from libre.hub.v1 import stats_pb2, stats_pb2_grpc
+from librebots.hub.v1 import stats_pb2, stats_pb2_grpc
 
 
 async def total_guilds(channel: grpc.aio.Channel) -> int:

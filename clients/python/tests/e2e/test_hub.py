@@ -4,8 +4,8 @@ import grpc
 import grpc.aio
 import pytest
 
-from libre.hub.v1 import guilds_pb2, guilds_pb2_grpc, stats_pb2, stats_pb2_grpc
-from libre_hub_client import connect, reason_of
+from librebots.hub import connect, reason_of
+from librebots.hub.v1 import guilds_pb2, guilds_pb2_grpc, info_pb2, info_pb2_grpc, stats_pb2, stats_pb2_grpc
 
 pytestmark = pytest.mark.e2e
 
@@ -32,6 +32,12 @@ async def test_stats_list_the_bot() -> None:
     figures = {bot.bot: bot.figures for bot in stats.bots}
     assert "example" in figures
     assert figures["example"].guild_count >= 1
+
+
+async def test_info_reports_a_version() -> None:
+    async with connect(ADDRESS, TOKEN, tls=False) as channel:
+        info = await info_pb2_grpc.InfoServiceStub(channel).GetInfo(info_pb2.GetInfoRequest())
+    assert info.version
 
 
 async def test_reason_crosses_the_wire() -> None:

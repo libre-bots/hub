@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	hubv1 "github.com/libre-bots/hub/gen/libre/hub/v1"
+	hubv1 "github.com/libre-bots/hub/gen/librebots/hub/v1"
 	"github.com/libre-bots/hub/internal/privacy"
 	"github.com/libre-bots/hub/internal/retention"
 	"github.com/libre-bots/hub/internal/testkit"

@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	hubv1 "github.com/libre-bots/hub/gen/libre/hub/v1"
+	hubv1 "github.com/libre-bots/hub/gen/librebots/hub/v1"
 	"github.com/libre-bots/hub/internal/reason"
 	"github.com/libre-bots/hub/internal/store/sqlc"
 )

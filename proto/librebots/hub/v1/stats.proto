@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package librebots.hub.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service StatsService {
+  // Guild and member counts of guilds the configured bots are in, per bot and in total with each guild counted once.
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+}
+
+message Figures {
+  uint64 guild_count = 1;
+  uint64 member_count = 2;
+}
+message BotFigures {
+  string bot = 1;
+  Figures figures = 2;
+}
+message GetStatsRequest {}
+message GetStatsResponse {
+  repeated BotFigures bots = 1;
+  Figures total = 2;
+  google.protobuf.Timestamp computed_at = 3;
+}
