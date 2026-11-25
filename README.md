@@ -88,6 +88,11 @@ asyncio.run(main())
 `shards` takes a function that returns the shard ids and the shard count of the process, for example
 `lambda: ([0, 1], 4)`, or `None` while the shards are not known yet. The hub adds them to its log records, nothing else.
 
+## Releases
+
+A maintainer runs `release` in the Actions tab on `main` and chooses `patch`, `minor` or `major`, optionally as a
+release candidate. The run publishes the image and the Python package.
+
 ## Hosting it yourself
 
 - Keep the Postgres volume on encrypted storage. The database holds guild ids, their settings and the user ids of
