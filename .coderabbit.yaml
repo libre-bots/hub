@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: >-
+  Be direct and specific. Name the file and line, the input or state that breaks, and what goes wrong as a result.
+  Skip praise and do not restate the diff.
+early_access: false
+
+reviews:
+  profile: assertive
+  auto_approvals:
+    enabled: true
+    min_blocking_severity: major
+  high_level_summary: true
+  review_status: true
+  review_details: true
+  commit_status: true
+  fail_commit_status: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  poem: false
+  in_progress_fortune: false
+  suggested_labels: false
+  suggested_reviewers: false
+  abort_on_close: true
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: >-
+        A plain imperative sentence in sentence case, such as "Add the hub foundation". No type prefix such as
+        "feat:" or "fix:", no scope in brackets, no issue number and no trailing period.
+    description:
+      mode: warning
+  tools:
+    markdownlint:
+      enabled: false
+    yamllint:
+      enabled: false
+    pylint:
+      enabled: false
+    flake8:
+      enabled: false
+    sqlfluff:
+      enabled: false
+  path_filters:
+    - "!gen/**"
+    - "!internal/store/sqlc/**"
+    - "!clients/python/src/librebots/hub/v1/**"
+  path_instructions:
+    - path: "**/*.{py,go}"
+      instructions: >-
+        Comments: flag any comment that restates what the code does, describes a change ("now uses", "fixed",
+        "changed to", "updated to") or runs longer than two lines. A comment is only justified for a reason the code
+        cannot show, such as a workaround, a non-obvious constraint or a reference to an issue. Docstrings belong
+        only on public API and say what a caller needs to know, not how it works inside. Linter directives such as
+        noqa, nolint and type: ignore are fine.
+    - path: "**/*.py"
+      instructions: >-
+        Python 3.12, checked by pyright in strict mode and by ruff, so leave formatting and import order to them.
+        Flag Any leaking into public signatures, casts and "type: ignore" without a stated reason, and missing return
+        types. In async code flag blocking calls (time.sleep, synchronous file or network I/O, subprocess.run),
+        tasks created without keeping a reference or handling their exceptions, and locks held across awaits that
+        call the network. Flag "except Exception" or bare except that hides failures, mutable default arguments,
+        and work done at import time. Tests check behaviour through public interfaces, not private attributes, and
+        never wait on wall-clock time without a timeout.
+    - path: ".github/workflows/**"
+      instructions: >-
+        GitHub Actions. Every third-party action and every reusable workflow is pinned to a full 40-character commit
+        SHA with the version as a trailing comment (uses: owner/repo@<sha> # v1.2.3); flag tags, branches and short
+        SHAs. The workflow sets "permissions: {}" at the top and each job grants only what it needs; flag anything
+        broader. No ${{ }} expression is expanded inside a run: script; values reach the shell through env:. Every
+        actions/checkout sets persist-credentials: false unless a later step pushes. The CI workflow ends with a
+        job named "CI Done" that needs every other job and passes toJSON(needs) to the shared ci-done action; flag a
+        job missing from its needs. Pull request runs may cancel each other, runs on main must not.
+    - path: "**/*.md"
+      instructions: >-
+        Documentation is short, plain English for someone who runs or uses the project. Flag statements that no
+        longer match the code or workflows in the same pull request, commands that would not work as written, and
+        promotional language.
+    - path: "{cmd,internal}/**/*.go"
+      instructions: >-
+        The hub is a gRPC service that owns the Postgres database for all bots. Every call acts only for the
+        authenticated bot: flag a query or result that is not scoped to the calling bot. Errors reach clients
+        through the reason package with a gRPC status code; flag internal errors, SQL text or stack traces that
+        reach a client. Wrap errors with context using %w. Pass ctx through every call that does I/O; flag
+        context.Background() in request paths and goroutines without a way to stop them. Writes that must be atomic
+        use one transaction or an advisory lock; flag read-then-write races between concurrent calls of the same
+        bot. Log records carry the bot name and, when present, its shards, and never tokens.
+    - path: "internal/privacy/**"
+      instructions: >-
+        Privacy operations count, export and delete a person's or a guild's data across every service. Flag new
+        data that one of these operations misses, deletions that can stop half way without the caller knowing, and
+        exports that include another bot's data.
+    - path: "{migrations,internal/store/queries}/**/*.sql"
+      instructions: >-
+        Postgres. The hub stores Discord ids and settings, never message contents, user names or tokens; flag a
+        column that would. Migrations are goose files with a working Down section. Flag edits to a migration that is
+        already on main (add a new one instead), NOT NULL columns added without a default to tables that may hold
+        rows, and lookups without an index. Queries filter by bot wherever the table has a bot column.
+    - path: "proto/**/*.proto"
+      instructions: >-
+        The public interface of the hub, used by every bot through the generated clients. Flag changes that break
+        existing clients: removed or renumbered fields, changed types, renamed services, methods or enum values.
+        Removed fields and numbers are reserved. Every service, method, message and field has a comment that tells
+        a client what it means and when it is empty.
+    - path: "clients/python/src/librebots/hub/*.py"
+      instructions: >-
+        The hand-written part of the published client librebots-hub (connect, reason_of, KEEPALIVE_OPTIONS). Flag
+        changes that break callers without a major version, and any path that sends the bot token without TLS
+        unless the caller passed tls=False.
+    - path: "Dockerfile"
+      instructions: >-
+        The final stage stays distroless and runs as nonroot, and the binary gets its version from the VERSION
+        build argument. Flag anything that adds a shell, a package manager or a secret to the final stage.
+
+chat:
+  art: false
+
+knowledge_base:
+  learnings:
+    scope: global
+  web_search:
+    enabled: true
+  linked_repositories:
+    - repository: libre-bots/kit
+      instructions: >-
+        The kit is the main consumer of the Python client librebots-hub. When the proto or the client changes,
+        check how the kit calls the changed services and whether it would break.
