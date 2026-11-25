@@ -66,6 +66,7 @@ func serve(ctx context.Context, getenv func(string) string, stderr io.Writer) er
 		TLS:        creds,
 		Now:        now,
 		Logger:     logger,
+		Version:    version,
 	})
 
 	lis, err := listen("tcp", cfg.ListenAddr)

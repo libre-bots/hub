@@ -5,8 +5,8 @@ import grpc
 import grpc.aio
 import pytest
 
-from libre.hub.v1 import guilds_pb2, guilds_pb2_grpc, stats_pb2, stats_pb2_grpc
-from libre_hub_client import KEEPALIVE_OPTIONS, connect
+from librebots.hub import KEEPALIVE_OPTIONS, connect
+from librebots.hub.v1 import guilds_pb2, guilds_pb2_grpc, stats_pb2, stats_pb2_grpc
 
 
 class StatsServicer(stats_pb2_grpc.StatsServiceServicer):

@@ -34,7 +34,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	hubv1 "github.com/libre-bots/hub/gen/libre/hub/v1"
+	hubv1 "github.com/libre-bots/hub/gen/librebots/hub/v1"
 	"github.com/libre-bots/hub/internal/auth"
 	"github.com/libre-bots/hub/internal/testkit"
 )
@@ -115,7 +115,8 @@ func dial(t *testing.T, addr string, creds credentials.TransportCredentials) *gr
 
 func TestServeAnswersAuthenticatedCalls(t *testing.T) {
 	r := startHub(t, map[string]string{"HUB_BOT_TOKENS": "example=" + auth.HashToken("dev-token")})
-	client := hubv1.NewStatsServiceClient(dial(t, r.addr, insecure.NewCredentials()))
+	conn := dial(t, r.addr, insecure.NewCredentials())
+	client := hubv1.NewStatsServiceClient(conn)
 
 	ctx := metadata.AppendToOutgoingContext(t.Context(), "authorization", "Bearer dev-token")
 	resp, err := client.GetStats(ctx, &hubv1.GetStatsRequest{})
@@ -125,6 +126,10 @@ func TestServeAnswersAuthenticatedCalls(t *testing.T) {
 
 	_, err = client.GetStats(t.Context(), &hubv1.GetStatsRequest{})
 	assert.Equal(t, codes.Unauthenticated, status.Code(err))
+
+	info, err := hubv1.NewInfoServiceClient(conn).GetInfo(ctx, &hubv1.GetInfoRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, "dev", info.Version)
 }
 
 func TestServeStopsWhenContextEnds(t *testing.T) {

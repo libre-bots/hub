@@ -4,8 +4,8 @@ import pytest
 from google.protobuf.any_pb2 import Any
 from google.rpc import code_pb2, error_details_pb2, status_pb2  # pyright: ignore[reportMissingTypeStubs]
 
-from libre.hub.v1 import stats_pb2, stats_pb2_grpc
-from libre_hub_client import connect, reason_of
+from librebots.hub import connect, reason_of
+from librebots.hub.v1 import stats_pb2, stats_pb2_grpc
 
 
 class FailingStats(stats_pb2_grpc.StatsServiceServicer):

@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package librebots.hub.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service PrivacyService {
+  // Counts what the calling bot stores about the user, by category.
+  rpc CountUserData(CountUserDataRequest) returns (CountUserDataResponse);
+  // Returns a JSON document with bot, user_id as a string, exported_at and the data the calling bot exports.
+  rpc ExportUserData(ExportUserDataRequest) returns (ExportUserDataResponse);
+  // Deletes what the calling bot stores about the user and clears the user's pending deletion request.
+  rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
+  // Records a pending deletion request for the user; repeating it keeps the first request.
+  rpc RequestUserDeletion(RequestUserDeletionRequest) returns (RequestUserDeletionResponse);
+  // Lists the calling bot's pending deletion requests, oldest first.
+  rpc ListPendingUserDeletions(ListPendingUserDeletionsRequest) returns (ListPendingUserDeletionsResponse);
+  // Counts what the calling bot stores about the guild, by category.
+  rpc CountGuildData(CountGuildDataRequest) returns (CountGuildDataResponse);
+  // Deletes what the calling bot stores about the guild.
+  rpc DeleteGuildData(DeleteGuildDataRequest) returns (DeleteGuildDataResponse);
+}
+
+message CategoryCount {
+  string category = 1;
+  uint64 count = 2;
+}
+
+message CountUserDataRequest {
+  uint64 user_id = 1;
+}
+message CountUserDataResponse {
+  repeated CategoryCount categories = 1;
+}
+message ExportUserDataRequest {
+  uint64 user_id = 1;
+}
+message ExportUserDataResponse {
+  string json = 1;
+}
+message DeleteUserDataRequest {
+  uint64 user_id = 1;
+}
+message DeleteUserDataResponse {
+  repeated CategoryCount deleted = 1;
+}
+message RequestUserDeletionRequest {
+  uint64 user_id = 1;
+}
+message RequestUserDeletionResponse {}
+message ListPendingUserDeletionsRequest {}
+message PendingUserDeletion {
+  uint64 user_id = 1;
+  google.protobuf.Timestamp requested_at = 2;
+}
+message ListPendingUserDeletionsResponse {
+  repeated PendingUserDeletion deletions = 1;
+}
+message CountGuildDataRequest {
+  uint64 guild_id = 1;
+}
+message CountGuildDataResponse {
+  repeated CategoryCount categories = 1;
+}
+message DeleteGuildDataRequest {
+  uint64 guild_id = 1;
+}
+message DeleteGuildDataResponse {
+  repeated CategoryCount deleted = 1;
+}

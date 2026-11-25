@@ -3,10 +3,9 @@
 generate:
 	buf generate
 	sqlc generate
-	rm -rf clients/python/src/libre
+	rm -rf clients/python/src/librebots/hub/v1
 	cd clients/python && uv run python -m grpc_tools.protoc -I ../../proto --python_out=src --grpc_python_out=src \
 		--mypy_out=src --mypy_grpc_out=src $$(find ../../proto -name '*.proto' | sort)
-	touch clients/python/src/libre/hub/v1/py.typed
 
 lint:
 	! gofmt -l . | grep .

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package librebots.hub.v1;
+
+service InfoService {
+  // The version the hub was built with, like "1.3.0" or "1.3.0-rc.1"; "dev" for builds without one.
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+}
+
+message GetInfoRequest {}
+message GetInfoResponse {
+  string version = 1;
+}

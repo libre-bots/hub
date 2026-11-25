@@ -32,6 +32,7 @@ type config struct {
 	reflection bool
 	notifier   notify.Notifier
 	logger     *slog.Logger
+	version    string
 	bots       []func(*server.Server)
 }
 
@@ -56,6 +57,10 @@ func WithLogger(l *slog.Logger) Option {
 	return func(c *config) { c.logger = l }
 }
 
+func WithVersion(v string) Option {
+	return func(c *config) { c.version = v }
+}
+
 // New serves bots alpha and beta with the tokens "alpha-token" and "beta-token".
 func New(t *testing.T, opts ...Option) *Env {
 	t.Helper()
@@ -75,6 +80,7 @@ func New(t *testing.T, opts ...Option) *Env {
 		Now:        clock.Now,
 		Notifier:   cfg.notifier,
 		Logger:     cfg.logger,
+		Version:    cfg.version,
 	})
 	for _, register := range cfg.bots {
 		register(srv)

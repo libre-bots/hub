@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	hubv1 "github.com/libre-bots/hub/gen/libre/hub/v1"
+	hubv1 "github.com/libre-bots/hub/gen/librebots/hub/v1"
 	"github.com/libre-bots/hub/internal/reason"
 )
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	hubv1 "github.com/libre-bots/hub/gen/libre/hub/v1"
+	hubv1 "github.com/libre-bots/hub/gen/librebots/hub/v1"
 	"github.com/libre-bots/hub/internal/stats"
 	"github.com/libre-bots/hub/internal/testkit"
 )

@@ -64,14 +64,14 @@ mise install
 ## Python client
 
 ```sh
-pip install "libre-hub-client @ git+https://github.com/libre-bots/hub@v0.1.0#subdirectory=clients/python"
+pip install librebots-hub
 ```
 
 ```python
 import asyncio
 
-from libre.hub.v1 import stats_pb2, stats_pb2_grpc
-from libre_hub_client import connect
+from librebots.hub import connect
+from librebots.hub.v1 import stats_pb2, stats_pb2_grpc
 
 
 async def main() -> None:

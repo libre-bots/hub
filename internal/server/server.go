@@ -17,9 +17,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	hubv1 "github.com/libre-bots/hub/gen/libre/hub/v1"
+	hubv1 "github.com/libre-bots/hub/gen/librebots/hub/v1"
 	"github.com/libre-bots/hub/internal/auth"
 	"github.com/libre-bots/hub/internal/guilds"
+	"github.com/libre-bots/hub/internal/info"
 	"github.com/libre-bots/hub/internal/notify"
 	"github.com/libre-bots/hub/internal/privacy"
 	"github.com/libre-bots/hub/internal/stats"
@@ -33,6 +34,7 @@ type Options struct {
 	Now        func() time.Time
 	Notifier   notify.Notifier // nil: in-process
 	Logger     *slog.Logger    // nil: discard
+	Version    string          // empty: "dev"
 }
 
 type Server struct {
@@ -92,6 +94,7 @@ func New(o Options) *Server {
 	hubv1.RegisterGuildServiceServer(s.grpc, guilds.NewService(o.Pool, n, o.Now, s.Done()))
 	hubv1.RegisterPrivacyServiceServer(s.grpc, privacy.NewService(o.Pool, s.owners, o.Now))
 	hubv1.RegisterStatsServiceServer(s.grpc, stats.NewService(o.Pool, slices.Sorted(maps.Keys(o.Bots)), o.Now))
+	hubv1.RegisterInfoServiceServer(s.grpc, info.NewService(o.Version))
 	access.Open(healthpb.Health_ServiceDesc.ServiceName)
 	if o.Reflection {
 		reflection.Register(s.grpc)
