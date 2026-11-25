@@ -21,7 +21,7 @@ dev = [
     "grpcio-tools",
     "mypy-protobuf",
     # 1.85.0.20261122 needs _typeshed.FloatInt, which the newest pyright does not ship yet
-    "types-grpcio<1.85.0.20261122",
+    "types-grpcio<1.85.0.20261123",
     "grpcio-status",
     "pytest",
     "pytest-asyncio",
