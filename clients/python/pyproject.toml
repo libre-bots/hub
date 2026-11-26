@@ -50,9 +50,14 @@ extend-exclude = ["src/librebots/hub/v1"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["src/librebots/hub", "tests"]
 exclude = ["src/librebots/hub/v1"]
 extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from collections.abc import Awaitable
+
 import grpc
 import grpc.aio
 import pytest
@@ -15,7 +19,7 @@ class FailingStats(stats_pb2_grpc.StatsServiceServicer):
     async def GetStats(
         self,
         request: stats_pb2.GetStatsRequest,
-        context: grpc.aio.ServicerContext[stats_pb2.GetStatsRequest, stats_pb2.GetStatsResponse],
+        context: grpc.aio.ServicerContext[stats_pb2.GetStatsRequest, Awaitable[stats_pb2.GetStatsResponse]],
     ) -> stats_pb2.GetStatsResponse:
         if self.details is not None:
             status = status_pb2.Status(code=code_pb2.NOT_FOUND, message="failed", details=self.details)

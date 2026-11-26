@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import grpc.aio
 
 from librebots.hub.v1 import stats_pb2, stats_pb2_grpc

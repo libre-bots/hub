@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from librebots.hub._channel import KEEPALIVE_OPTIONS, connect
 from librebots.hub._reason import reason_of
 

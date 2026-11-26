@@ -1,4 +1,6 @@
-from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from __future__ import annotations
+
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 import grpc
@@ -16,7 +18,7 @@ class StatsServicer(stats_pb2_grpc.StatsServiceServicer):
     async def GetStats(
         self,
         request: stats_pb2.GetStatsRequest,
-        context: grpc.aio.ServicerContext[stats_pb2.GetStatsRequest, stats_pb2.GetStatsResponse],
+        context: grpc.aio.ServicerContext[stats_pb2.GetStatsRequest, Awaitable[stats_pb2.GetStatsResponse]],
     ) -> stats_pb2.GetStatsResponse:
         self.seen = dict(context.invocation_metadata() or ())
         return stats_pb2.GetStatsResponse()
@@ -29,7 +31,9 @@ class GuildServicer(guilds_pb2_grpc.GuildServiceServicer):
     async def WatchGuildSettings(
         self,
         request: guilds_pb2.WatchGuildSettingsRequest,
-        context: grpc.aio.ServicerContext[guilds_pb2.WatchGuildSettingsRequest, guilds_pb2.WatchGuildSettingsResponse],
+        context: grpc.aio.ServicerContext[
+            guilds_pb2.WatchGuildSettingsRequest, AsyncIterator[guilds_pb2.WatchGuildSettingsResponse]
+        ],
     ) -> AsyncIterator[guilds_pb2.WatchGuildSettingsResponse]:
         self.seen = dict(context.invocation_metadata() or ())
         yield guilds_pb2.WatchGuildSettingsResponse()
