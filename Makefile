@@ -5,7 +5,7 @@ generate:
 	sqlc generate
 	rm -rf clients/python/src/librebots/hub/v1
 	cd clients/python && uv run python -m grpc_tools.protoc -I ../../proto --python_out=src --grpc_python_out=src \
-		--mypy_out=src --mypy_grpc_out=src $$(find ../../proto -name '*.proto' | sort)
+		--mypy_out=src --mypy_grpc_out=only_async:src $$(find ../../proto -name '*.proto' | sort)
 
 lint:
 	! gofmt -l . | grep .

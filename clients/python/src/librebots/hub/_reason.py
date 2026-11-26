@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import grpc.aio
 from google.protobuf.message import DecodeError
 from google.rpc import error_details_pb2, status_pb2  # pyright: ignore[reportMissingTypeStubs]
