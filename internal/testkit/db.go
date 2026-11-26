@@ -31,7 +31,7 @@ func Main(m *testing.M) {
 
 func run(m *testing.M) int {
 	ctx := context.Background()
-	container, err := postgres.Run(ctx, "postgres:18-alpine",
+	container, err := postgres.Run(ctx, "postgres:19-alpine",
 		postgres.WithDatabase("postgres"),
 		postgres.WithUsername("hub"),
 		postgres.WithPassword("hub"),
